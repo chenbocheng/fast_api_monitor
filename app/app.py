@@ -1,10 +1,9 @@
 from fastapi import FastAPI
-from typing import Dict, Any
-
+from typing import List, Dict, Any
 from utils import router, config, logger
 from utils.config import Global
-from service import check_service
-
+from service import check_service, monitor_service
+from fastapi_utils.tasks import repeat_every
 
 """
 USE os.getenv() TO GET ENV VARS IN dev.cfg OR prod.cfg
@@ -16,7 +15,6 @@ description: str = config.get('DESCRIPTION')
 version: str = config.get('VERSION')
 debug: bool = config.get_bool('DEBUG')
 
-
 fastapi_cfg: Dict[str, Any] = {
     'debug': env != 'prod',
     'title': app_name,
@@ -25,21 +23,31 @@ fastapi_cfg: Dict[str, Any] = {
     'is_debug': debug
 }
 
-
 # init app
 app = FastAPI(**fastapi_cfg)
 router.register_controllers(app)
 router.register_middlewares(app)
 
-
 LOGGER = logger.get_application_logger()
 
 
+async def monitor_task():
+    checks: List[Dict] = check_service.get_items()
+    await monitor_service.async_check_urls(checks)
+    Global.MONITOR_ON = True
+
+
 @app.on_event('startup')
+@repeat_every(seconds=60)
 async def start_app():
-    Global.CHECK_DATA = check_service.load_checks()
-    LOGGER.info('startup _CHECK_DATA: \n%s' % Global.CHECK_DATA)
-    LOGGER.info('Launching application: %s\n%s' % (app_name, fastapi_cfg))
+    if not Global.MONITOR_ON:
+        LOGGER.info('on_event startup: %s\n%s' % (app_name, fastapi_cfg))
+        Global.CHECK_DATA = check_service.load_checks()
+        LOGGER.debug('startup _CHECK_DATA: \n%s' % Global.CHECK_DATA)
+        LOGGER.info('on_event startup END: %s' % app_name)
+
+    LOGGER.debug('monitor_task call...')
+    await monitor_task()
 
 
 @app.on_event('shutdown')

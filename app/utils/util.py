@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any
 import hashlib
 import json
@@ -9,7 +10,9 @@ class JsonEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             return obj.replace(microsecond=0).isoformat()
         elif isinstance(obj, date):
-            return obj.replace(microsecond=0).isoformat()
+            return obj.replace().isoformat()
+        elif isinstance(obj, Enum):
+            return obj.name
         else:
             return json.JSONEncoder.default(self, obj)
 

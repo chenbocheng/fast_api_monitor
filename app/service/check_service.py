@@ -3,12 +3,11 @@ from model.check import Check
 from utils.logger import get_service_logger
 from utils.config import Global
 from utils.util import md5hash, jsondump, is_url
+from datetime import datetime
 from os import path
 import json
-from datetime import datetime
 
-
-LOGGER = get_service_logger('ITEM')
+LOGGER = get_service_logger('CHECK_SRV')
 
 
 def save_item(check: Check) -> Dict:
@@ -19,7 +18,7 @@ def save_item(check: Check) -> Dict:
     if not is_url(check.url):
         raise Exception('The url is invalid: %s' % check.url)
 
-    key: str = md5hash(check.url)   # the data map key
+    key: str = md5hash(check.url)  # the data map key
     check.id = key
     check.created = datetime.now()
     Global.CHECK_DATA[key] = check.dict()
@@ -67,6 +66,7 @@ def load_checks() -> Dict:
 def save_to_data(check: Dict) -> bool:
     """
     Save one check record to data file
+    TODO: later into DB
     """
     json_text: str = jsondump(check)
     with open(Global.CHECK_DATA_FILE, 'a+') as json_file:
@@ -77,6 +77,7 @@ def save_to_data(check: Dict) -> bool:
 def save_all_to_data(check_map: Dict) -> Dict:
     """
     Save all check records to data file
+    TODO: later into DB
     """
     json_text: str = jsondump(check_map)
     with open(Global.CHECK_DATA_FILE, 'w') as json_file:
